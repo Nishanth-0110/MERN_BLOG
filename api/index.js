@@ -30,7 +30,7 @@ const storage = new CloudinaryStorage({
 });
 const uploadMiddleware = multer({ storage });
 
-app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
+app.use(cors({ credentials: true, origin: process.env.CLIENT_URL || 'http://localhost:3000' }));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(__dirname + '/uploads'));
@@ -57,7 +57,11 @@ app.post('/login', async (req, res) => {
     if (passOk) {
         jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
             if (err) throw err;
-            res.cookie('token', token).json({
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+            }).json({
                 id: userDoc._id,
                 username,
             });
@@ -76,7 +80,11 @@ app.get('/profile', (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-    res.cookie('token', '').json('ok');
+    res.cookie('token', '', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+    }).json('ok');
 })
 
 app.post('/post', uploadMiddleware.single('file'), async (req, res) => {
@@ -130,4 +138,4 @@ app.get('/post/:id', async (req, res) => {
     res.json(postDoc);
 })
 
-app.listen(4000);
+app.listen(process.env.PORT || 4000);
