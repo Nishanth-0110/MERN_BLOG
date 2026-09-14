@@ -35,7 +35,14 @@ app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(__dirname + '/uploads'));
 
-mongoose.connect(process.env.MONGO_URI);
+mongoose.set('strictQuery', true);
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('MongoDB connected successfully'))
+    .catch(err => console.error('MongoDB connection error:', err));
+
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', mongo: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
+});
 
 app.post("/register", async (req, res) => {
     const { username, password } = req.body;
@@ -53,6 +60,9 @@ app.post("/register", async (req, res) => {
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const userDoc = await User.findOne({ username });
+    if (!userDoc) {
+        return res.status(400).json("Wrong Credentials");
+    }
     const passOk = bcrypt.compareSync(password, userDoc.password);
     if (passOk) {
         jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
@@ -73,8 +83,11 @@ app.post('/login', async (req, res) => {
 
 app.get('/profile', (req, res) => {
     const { token } = req.cookies;
+    if (!token) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
     jwt.verify(token, secret, {}, (err, info) => {
-        if (err) throw err;
+        if (err) return res.status(401).json({ error: 'Invalid token' });
         res.json(info);
     });
 });
@@ -89,8 +102,9 @@ app.post("/logout", (req, res) => {
 
 app.post('/post', uploadMiddleware.single('file'), async (req, res) => {
     const { token } = req.cookies;
+    if (!token) return res.status(401).json('Not authenticated');
     jwt.verify(token, secret, {}, async (err, info) => {
-        if (err) throw err;
+        if (err) return res.status(401).json('Invalid token');
         const { title, summary, content } = req.body;
         const postDoc = await Post.create({
             title,
@@ -105,8 +119,9 @@ app.post('/post', uploadMiddleware.single('file'), async (req, res) => {
 
 app.put('/post', uploadMiddleware.single('file'), async (req, res) => {
     const { token } = req.cookies;
+    if (!token) return res.status(401).json('Not authenticated');
     jwt.verify(token, secret, {}, async (err, info) => {
-        if (err) throw err;
+        if (err) return res.status(401).json('Invalid token');
         const { id, title, summary, content } = req.body;
         const postDoc = await Post.findById(id);
         const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
@@ -138,4 +153,6 @@ app.get('/post/:id', async (req, res) => {
     res.json(postDoc);
 })
 
-app.listen(process.env.PORT || 4000);
+app.listen(process.env.PORT || 4000, () => {
+    console.log(`Server running on port ${process.env.PORT || 4000}`);
+});
