@@ -1,5 +1,4 @@
-import { useState } from "react";
-import 'react-quill/dist/quill.snow.css';
+import { useEffect, useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import Editor from "../Editor";
 import { api } from "../api";
@@ -12,8 +11,17 @@ export default function CreatePost(){
     const [redirect, setRedirect] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [preview, setPreview] = useState(null);
 
-    const preview = files?.[0] ? URL.createObjectURL(files[0]) : null;
+    useEffect(() => {
+        if (!files?.[0]) {
+            setPreview(null);
+            return;
+        }
+        const url = URL.createObjectURL(files[0]);
+        setPreview(url);
+        return () => URL.revokeObjectURL(url);
+    }, [files]);
 
     function validate(){
         if (title.trim().length < 3) return 'Title must be at least 3 characters';

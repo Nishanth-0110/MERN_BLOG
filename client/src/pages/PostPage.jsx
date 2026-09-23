@@ -10,6 +10,7 @@ import Comments from "../Comments";
 export default function PostPage(){
     const [postInfo, setPostInfo] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const [deleting, setDeleting] = useState(false);
     const {userInfo} = useContext(UserContext);
     const {id} = useParams();
@@ -21,7 +22,10 @@ export default function PostPage(){
                 setPostInfo(postInfo);
                 setLoading(false);
             })
-            .catch(() => setLoading(false));
+            .catch((err) => {
+                setError(err.message);
+                setLoading(false);
+            });
     }, [id])
 
     async function deletePost(){
@@ -49,19 +53,20 @@ export default function PostPage(){
     if(!postInfo){
         return (
             <div className="empty-state">
-                <h2>Post not found</h2>
-                <p>It may have been deleted or never existed.</p>
+                <h2>{error ? 'Could not load post' : 'Post not found'}</h2>
+                <p>{error || 'It may have been deleted or never existed.'}</p>
                 <Link to="/" className="btn btn-primary">Back to home</Link>
             </div>
         );
     }
 
-    const authorInitial = postInfo.author?.username ? postInfo.author.username.charAt(0).toUpperCase() : '?';
+    const authorName = postInfo.author?.username || 'Unknown';
+    const authorInitial = authorName.charAt(0).toUpperCase();
     const timeAgo = formatDistanceToNow(new Date(postInfo.createdAt), {addSuffix: true});
     const readingTime = Math.max(1, Math.ceil(
         postInfo.content.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length / 200
     ));
-    const isAuthor = userInfo?.id === postInfo.author?._id;
+    const isAuthor = userInfo?.id && String(postInfo.author?._id) === String(userInfo.id);
 
     return(
         <div className="post-page">
@@ -83,7 +88,7 @@ export default function PostPage(){
                 <div className="author-avatar">{authorInitial}</div>
                 <div className="author-info">
                     <div className="written-by">Written by</div>
-                    <div className="author-name">{postInfo.author.username}</div>
+                    <div className="author-name">{authorName}</div>
                 </div>
                 <time dateTime={postInfo.createdAt}>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">

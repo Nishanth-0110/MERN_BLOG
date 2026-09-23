@@ -10,7 +10,12 @@ const env = require('../config/env');
 const postSchema = z.object({
     title: z.string().trim().min(1, 'Title is required').max(200, 'Title is too long'),
     summary: z.string().trim().min(1, 'Summary is required').max(500, 'Summary is too long'),
-    content: z.string().min(1, 'Content is required'),
+    content: z
+        .string()
+        .refine(
+            (v) => v.replace(/<[^>]*>/g, '').trim().length > 0,
+            'Content is required'
+        ),
 });
 
 const sanitizeOptions = {
@@ -122,8 +127,8 @@ const deletePost = asyncHandler(async (req, res) => {
         throw new ApiError(403, 'You are not the author');
     }
 
-    await postDoc.deleteOne();
     await Comment.deleteMany({ post: postDoc._id });
+    await postDoc.deleteOne();
     await destroyCover(postDoc.coverPublicId);
     res.status(204).send();
 });

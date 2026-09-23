@@ -75,7 +75,7 @@ export default function Comments({postId}){
                             <div className="comment-meta">
                                 <span className="author-name">{comment.author?.username}</span>
                                 <time>{formatDistanceToNow(new Date(comment.createdAt), {addSuffix: true})}</time>
-                                {userInfo?.id === comment.author?._id && (
+                                {userInfo?.id && String(comment.author?._id) === String(userInfo.id) && (
                                     <button
                                         className="comment-delete"
                                         onClick={() => remove(comment._id)}

@@ -6,8 +6,6 @@ const env = require('../config/env');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 
-const salt = bcrypt.genSaltSync(10);
-
 const credentialsSchema = z.object({
     username: z
         .string()
@@ -32,7 +30,7 @@ const register = asyncHandler(async (req, res) => {
 
     const userDoc = await User.create({
         username,
-        password: bcrypt.hashSync(password, salt),
+        password: bcrypt.hashSync(password, 10),
     });
     res.status(201).json(publicUser(userDoc));
 });
@@ -46,15 +44,12 @@ const login = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Wrong credentials');
     }
 
-    jwt.sign(
+    const token = jwt.sign(
         { username, id: userDoc._id },
         env.jwtSecret,
-        { expiresIn: env.jwtExpiresIn },
-        (err, token) => {
-            if (err) throw err;
-            res.cookie('token', token, env.cookieOptions).json(publicUser(userDoc));
-        }
+        { expiresIn: env.jwtExpiresIn }
     );
+    res.cookie('token', token, env.cookieOptions).json(publicUser(userDoc));
 });
 
 const profile = (req, res) => {

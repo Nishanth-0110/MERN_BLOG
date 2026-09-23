@@ -1,24 +1,33 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Navigate, useParams, Link } from "react-router-dom";
 import Editor from "../Editor";
 import { api, optimizeImage } from "../api";
+import { UserContext } from "../UserContext";
 
 export default function EditPost(){
     const {id} = useParams();
+    const {userInfo} = useContext(UserContext);
     const [title,setTitle] = useState('');
     const [summary, setSummary] = useState('');
     const [content, setContent] = useState('');
     const [cover, setCover] = useState('');
     const [files,setFiles] = useState('');
+    const [preview, setPreview] = useState(null);
     const [redirect,setRedirect] = useState(false);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
+    const [forbidden, setForbidden] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
 
     useEffect(() =>{
         api.get(`/post/${id}`)
             .then(postInfo =>{
+                if (postInfo.author?._id && String(postInfo.author._id) !== String(userInfo?.id)) {
+                    setForbidden(true);
+                    setLoading(false);
+                    return;
+                }
                 setTitle(postInfo.title);
                 setContent(postInfo.content);
                 setSummary(postInfo.summary);
@@ -29,7 +38,17 @@ export default function EditPost(){
                 setNotFound(true);
                 setLoading(false);
             });
-    }, [id]);
+    }, [id, userInfo]);
+
+    useEffect(() => {
+        if (!files?.[0]) {
+            setPreview(null);
+            return;
+        }
+        const url = URL.createObjectURL(files[0]);
+        setPreview(url);
+        return () => URL.revokeObjectURL(url);
+    }, [files]);
 
     function validate(){
         if (title.trim().length < 3) return 'Title must be at least 3 characters';
@@ -88,7 +107,17 @@ export default function EditPost(){
         );
     }
 
-    const preview = files?.[0] ? URL.createObjectURL(files[0]) : optimizeImage(cover);
+    if(forbidden){
+        return (
+            <div className="empty-state">
+                <h2>Not your post</h2>
+                <p>You can only edit posts you wrote.</p>
+                <Link to={`/post/${id}`} className="btn btn-primary">Back to post</Link>
+            </div>
+        );
+    }
+
+    const previewSrc = preview || optimizeImage(cover);
 
     return (
         <div className="create-edit-form">
@@ -131,7 +160,7 @@ export default function EditPost(){
                 <div className="form-group">
                     <label>Cover Image</label>
                     <input type="file" accept="image/*" onChange={ev => setFiles(ev.target.files)} />
-                    {preview && <img className="cover-preview" src={preview} alt="Cover preview" />}
+                    {previewSrc && <img className="cover-preview" src={previewSrc} alt="Cover preview" />}
                 </div>
                 <div className="form-group">
                     <label>Content</label>
