@@ -1,26 +1,41 @@
 import { useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { formatDistanceToNow } from "date-fns";
 import { useContext } from "react";
+import toast from "react-hot-toast";
 import { UserContext } from "../UserContext";
-
+import { api, optimizeImage } from "../api";
+import Comments from "../Comments";
 
 export default function PostPage(){
     const [postInfo, setPostInfo] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [deleting, setDeleting] = useState(false);
     const {userInfo} = useContext(UserContext);
     const {id} = useParams();
+    const navigate = useNavigate();
 
     useEffect(() =>{
-        fetch(`${process.env.REACT_APP_API_URL}/post/${id}`)
-            .then(response =>{
-                response.json().then(postInfo =>{
-                    setPostInfo(postInfo);
-                    setLoading(false);
-                })
+        api.get(`/post/${id}`)
+            .then(postInfo =>{
+                setPostInfo(postInfo);
+                setLoading(false);
             })
             .catch(() => setLoading(false));
     }, [id])
+
+    async function deletePost(){
+        if (!window.confirm('Delete this post? This cannot be undone.')) return;
+        setDeleting(true);
+        try {
+            await api.del(`/post/${id}`);
+            toast.success('Post deleted');
+            navigate('/');
+        } catch (err) {
+            toast.error(err.message);
+            setDeleting(false);
+        }
+    }
 
     if(loading){
         return (
@@ -31,25 +46,38 @@ export default function PostPage(){
         );
     }
 
-    if(!postInfo) return "";
+    if(!postInfo){
+        return (
+            <div className="empty-state">
+                <h2>Post not found</h2>
+                <p>It may have been deleted or never existed.</p>
+                <Link to="/" className="btn btn-primary">Back to home</Link>
+            </div>
+        );
+    }
 
     const authorInitial = postInfo.author?.username ? postInfo.author.username.charAt(0).toUpperCase() : '?';
     const timeAgo = formatDistanceToNow(new Date(postInfo.createdAt), {addSuffix: true});
+    const readingTime = Math.max(1, Math.ceil(
+        postInfo.content.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length / 200
+    ));
+    const isAuthor = userInfo?.id === postInfo.author?._id;
 
     return(
         <div className="post-page">
             <Link to="/" className="back-link">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
+                    <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04-1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
                 </svg>
                 Back to all posts
             </Link>
 
             <div className="post-hero-image">
-                <img src={postInfo.cover.startsWith('http') ? postInfo.cover : `${process.env.REACT_APP_API_URL}/${postInfo.cover}`} alt={postInfo.title} />
+                <img src={optimizeImage(postInfo.cover)} alt={postInfo.title} />
             </div>
 
             <h1>{postInfo.title}</h1>
+            <p className="reading-time">{readingTime} min read</p>
 
             <div className="post-author-bar">
                 <div className="author-avatar">{authorInitial}</div>
@@ -63,7 +91,7 @@ export default function PostPage(){
                     </svg>
                     {timeAgo}
                 </time>
-                {userInfo.id === postInfo.author._id && (
+                {isAuthor && (
                     <div className="post-actions">
                         <Link className="btn btn-outline" to={`/edit/${postInfo._id}`}>
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -72,11 +100,23 @@ export default function PostPage(){
                             </svg>
                             Edit
                         </Link>
+                        <button
+                            className="btn btn-danger"
+                            onClick={deletePost}
+                            disabled={deleting}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                            </svg>
+                            {deleting ? 'Deleting...' : 'Delete'}
+                        </button>
                     </div>
                 )}
             </div>
 
             <div className="content" dangerouslySetInnerHTML={{__html:postInfo.content}} />
+
+            <Comments postId={postInfo._id} />
         </div>
     )
 }

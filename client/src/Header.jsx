@@ -1,27 +1,20 @@
 import {Link} from "react-router-dom"
-import {useContext, useEffect} from "react";
+import {useContext} from "react";
+import toast from "react-hot-toast";
 import { UserContext } from "./UserContext";
+import { api } from "./api";
 
 export default function Header(){
     const {setUserInfo, userInfo} = useContext(UserContext);
-    useEffect(() =>{
-        fetch(`${process.env.REACT_APP_API_URL}/profile`, {
-            credentials: 'include',
-        }).then(response =>{
-            if (response.ok) {
-                response.json().then(userInfo =>{
-                    setUserInfo(userInfo);
-                })
-            }
-        })
-    },[setUserInfo])
 
-    function logout(){
-        fetch(`${process.env.REACT_APP_API_URL}/logout`, {
-            credentials: 'include',
-            method:'POST',
-        });
+    async function logout(){
+        try {
+            await api.post('/logout');
+        } catch {
+            // cookie may already be gone — still clear local state
+        }
         setUserInfo(null);
+        toast.success('Logged out');
     }
 
     const username = userInfo?.username;

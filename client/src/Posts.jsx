@@ -1,7 +1,8 @@
 import {formatDistanceToNow} from "date-fns"
 import { Link } from "react-router-dom";
+import { optimizeImage } from "./api";
 
-export default function Post({_id, title, summary, cover, content, createdAt, author}){
+export default function Post({_id, title, summary, cover, createdAt, author}){
     const timeAgo = formatDistanceToNow(new Date(createdAt), {addSuffix: true});
     const authorInitial = author?.username ? author.username.charAt(0).toUpperCase() : '?';
 
@@ -9,7 +10,7 @@ export default function Post({_id, title, summary, cover, content, createdAt, au
         <div className='post'>
             <div className='image'>
                 <Link to={`/post/${_id}`}>
-                    <img src={cover.startsWith('http') ? cover : `${process.env.REACT_APP_API_URL}/${cover}`} alt={title} />
+                    <img src={optimizeImage(cover)} alt={title} loading="lazy" />
                 </Link>
             </div>
             <div className='texts'>
@@ -32,7 +33,7 @@ export default function Post({_id, title, summary, cover, content, createdAt, au
                 <Link to={`/post/${_id}`} className="read-more">
                     Read more
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{width:'14px',height:'14px'}}>
-                        <path fillRule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 0 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 0 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z" clipRule="evenodd" />
                     </svg>
                 </Link>
             </div>

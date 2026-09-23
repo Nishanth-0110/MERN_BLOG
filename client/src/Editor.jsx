@@ -6,7 +6,7 @@ export default function Editor({value, onChange}){
             [{'header': [1,2,false]}],
             ['bold', 'italic', 'underline', 'strike', 'blockquote'],
             [
-                {list:'ordered'}, 
+                {list:'ordered'},
                 {list:'bullet'},
                 {indent: '-1' },
                 {indent: '+1'}
@@ -16,11 +16,11 @@ export default function Editor({value, onChange}){
         ]
     };
     return(
-        <ReactQuill 
-            value={value} 
+        <ReactQuill
+            value={value}
             theme={'snow'}
-            onChange={onChange} 
-            modules={modules} 
+            onChange={onChange}
+            modules={modules}
             />
     )
 }
