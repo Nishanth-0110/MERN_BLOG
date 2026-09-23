@@ -4,6 +4,7 @@
   "description": "Blogosphere — full-stack MERN blog platform",
   "private": true,
   "scripts": {
+    "start": "node api/index.js",
     "install:all": "npm --prefix api install && npm --prefix client install",
     "dev:api": "npm --prefix api run dev",
     "dev:client": "npm --prefix client run dev",
