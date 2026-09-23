@@ -9,3 +9,9 @@ node_modules
 
 # Ignore local env files
 *.env.local
+
+# test coverage
+coverage/
+
+# vite build output
+dist/

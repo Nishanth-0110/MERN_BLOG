@@ -1,114 +1,89 @@
-# 📝 MERN Blog Application
+# 📝 Blogosphere — MERN Blog Platform
 
-A full-stack blog application built using the MERN stack — MongoDB, Express.js, React.js, and Node.js. Users can register, log in, create/edit blog posts, and upload images.
+A full-stack blogging platform built with MongoDB, Express, React (Vite) and Node.js. Users can register, publish posts with cover images and rich-text content, search and paginate the feed, delete their own posts, and discuss via comments.
 
 ---
 
 ## 🚀 Features
 
-- 🔐 User Registration & Login with JWT
-- ✏️ Create, Edit, View Blog Posts
-- 🖼️ Upload & Display Images using Multer
-- 🍪 Cookie-based Authentication
-- 🧠 MongoDB via Mongoose
-- ⚛️ React-based Responsive Frontend
+- 🔐 JWT auth in httpOnly cookies (bcrypt password hashing, expiring tokens)
+- ✏️ Create / edit / **delete** posts with a Quill rich-text editor
+- 🖼️ Cover images on Cloudinary (auto format/quality, old assets cleaned up)
+- 💬 Comments — signed-in users can comment and manage their own
+- 🔎 Server-side **search** + **pagination** on the post feed
+- 🛡️ Security: input sanitization (stored-XSS safe), zod validation, rate limiting, helmet, mongo-sanitize
+- ⚙️ Modular API: routes / controllers / middleware / config + centralized error handling
+- ✅ Backend tests (Jest + Supertest + mongodb-memory-server), frontend test (Vitest + RTL)
+- ⚡ Vite frontend, ESLint + Prettier, GitHub Actions CI, Docker & docker-compose
 
 ---
 
 ## 📁 Project Structure
 
 ```
-MERN_Blog/
-├── api/                    # Backend (Node.js + Express)
-│   ├── models/            # Mongoose schemas (User, Post)
-│   ├── uploads/           # Uploaded images
-│   ├── index.js           # Express server entry point
-│   ├── package.json       # Backend dependencies
-│   └── .env               # Environment variables
+├── api/
+│   ├── config/          # env validation, cloudinary/multer storage
+│   ├── controllers/     # auth, post, comment handlers
+│   ├── middleware/      # requireAuth, zod validate, ObjectId guard, errors
+│   ├── models/          # User, Post, Comment (mongoose schemas + indexes)
+│   ├── routes/          # auth.js, posts.js, comments.js
+│   ├── tests/           # jest + supertest + mongodb-memory-server
+│   ├── utils/           # ApiError, asyncHandler
+│   ├── app.js           # express app assembly (exported for tests)
+│   ├── index.js         # DB connect + listen
+│   └── Dockerfile
 │
-├── client/                # Frontend (React app)
-│   ├── public/
+├── client/
 │   ├── src/
-│   │   ├── pages/
-│   │   │   ├── CreatePost.js
-│   │   │   ├── EditPost.js
-│   │   │   ├── IndexPage.js
-│   │   │   ├── LoginPage.js
-│   │   │   ├── PostPage.js
-│   │   │   └── RegisterPage.js
-│   │   ├── App.css
-│   │   ├── App.js
-│   │   ├── App.test.js
-│   │   ├── Editor.js
-│   │   ├── Header.js
-│   │   ├── index.css
-│   │   ├── index.js
-│   │   ├── Layout.js
-│   │   ├── logo.svg
-│   │   ├── Posts.js
-│   │   ├── reportWebVitals.js
-│   │   ├── setupTests.js
-│   │   └── UserContext.js
-│   └── package.json       # Frontend dependencies
+│   │   ├── api.js       # fetch wrapper (credentials, JSON, errors)
+│   │   ├── UserContext.jsx / RequireAuth.jsx
+│   │   ├── Header.jsx / Layout.jsx / Posts.jsx / Comments.jsx / Editor.jsx
+│   │   └── pages/       # Index, Login, Register, CreatePost, EditPost, PostPage, NotFound
+│   ├── index.html       # vite entry
+│   ├── vite.config.js
+│   ├── nginx.conf       # SPA fallback for the production image
+│   └── Dockerfile
 │
-├── .gitignore             # Git ignore rules
-└── README.md              # You're here!
+├── docker-compose.yml   # mongo + api + client
+└── .github/workflows/ci.yml
 ```
 
 ---
 
-## ⚙️ Backend Setup (API)
+## ⚙️ Backend Setup (api/)
 
-### 1. Go to the api/ directory
 ```bash
 cd api
-```
-
-### 2. Install dependencies
-```bash
 npm install
+cp .env.example .env    # fill in MONGO_URI, JWT_SECRET, Cloudinary keys
+npm run dev             # node --watch
 ```
 
-### 3. Create `.env` file
-```env
-MONGO_URI=mongodb+srv://<your_user>:<your_pass>@cluster.mongodb.net/?retryWrites=true&w=majority
-JWT_SECRET=your_secret_key_here
-PORT=4000
-```
-> Replace placeholders with your actual MongoDB URI and secret key.
+Server runs at `http://localhost:4000`.
 
-### 4. Ensure uploads folder exists
+## ⚛️ Frontend Setup (client/)
+
 ```bash
-mkdir -p uploads
-touch uploads/.gitkeep
-```
-> This ensures the uploads folder is present even when empty.
-
-### 5. Run the backend server
-```bash
-node index.js
-```
-> Server will run at: `http://localhost:4000`
-
----
-
-## ⚛️ Frontend Setup (React)
-
-### 1. Go to the `client/` directory
-```bash
-cd ../client
-```
-
-### 2. Install frontend dependencies
-```bash
+cd client
 npm install
+npm run dev             # vite dev server
 ```
 
-### 3. Run the frontend
+Frontend runs at `http://localhost:5173` (set `VITE_API_URL` in `client/.env` to point at the API).
+
+## 🐳 Docker
+
 ```bash
-npm start
+docker compose up --build
+# client -> http://localhost:3000, api -> http://localhost:4000
 ```
-> Frontend will run at: `http://localhost:3000`
+
+## 🧪 Tests
+
+```bash
+cd api && npm test       # 17 integration tests against in-memory mongo
+cd client && npm test    # vitest smoke test
+```
 
 ---
 
@@ -116,107 +91,33 @@ npm start
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/register` | Register new user |
-| POST | `/login` | User login (sets cookie) |
-| GET | `/profile` | Get logged-in user data |
-| POST | `/logout` | User logout (clears cookie) |
-| POST | `/post` | Create a new post |
-| PUT | `/post` | Edit existing post |
-| GET | `/post` | Get all posts |
-| GET | `/post/:id` | Get post by ID |
+| POST | `/register` | Register (zod-validated, no hash in response) |
+| POST | `/login` | Login — sets expiring httpOnly JWT cookie |
+| GET | `/profile` | Current user (auth required) |
+| POST | `/logout` | Clear auth cookie |
+| GET | `/post?page=&limit=&search=` | Paginated post feed with search |
+| GET | `/post/:id` | Single post |
+| POST | `/post` | Create post (auth, multipart `file`) |
+| PUT | `/post/:id` | Update post (author only) |
+| DELETE | `/post/:id` | Delete post + comments + cloudinary asset (author only) |
+| GET | `/post/:id/comments` | List comments |
+| POST | `/post/:id/comments` | Add comment (auth) |
+| DELETE | `/comment/:id` | Delete own comment |
+| GET | `/health` | DB + uptime status |
 
 ---
 
-## 🔧 Required Dependencies
+## 🔐 Security
 
-### Backend (api/package.json)
-```json
-{
-  "dependencies": {
-    "express": "^4.18.0",
-    "mongoose": "^7.0.0",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.0",
-    "cookie-parser": "^1.4.6",
-    "multer": "^1.4.5",
-    "cors": "^2.8.5",
-    "dotenv": "^16.0.0"
-  }
-}
-```
-
-### Frontend (client/package.json)
-```json
-{
-  "dependencies": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "react-router-dom": "^6.0.0",
-    "react-quill": "^2.0.0"
-  }
-}
-```
-
----
-
-## 📝 Environment Variables
-
-Create a `.env` file in the `api/` directory:
-
-```env
-# MongoDB Connection
-MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/blogdb?retryWrites=true&w=majority
-
-# JWT Secret (use a strong random string)
-JWT_SECRET=your_super_secret_jwt_key_here
-
-# Server Port
-PORT=4000
-
----
-
+- `sanitize-html` allowlist on post content — prevents stored XSS through `dangerouslySetInnerHTML`
+- zod validation on all write endpoints; ObjectId guard on `:id` params
+- bcryptjs hashing, JWT with `expiresIn`, httpOnly + sameSite cookies (env-aware)
+- express-rate-limit on auth and write routes; helmet headers; express-mongo-sanitize
+- Multer file-type filter + 5MB limit
 
 ## 📦 Tech Stack
 
-- **Backend**: Node.js, Express.js
-- **Database**: MongoDB + Mongoose
-- **Frontend**: React.js, React Router
-- **Authentication**: JWT, HTTP-only Cookies
-- **File Uploads**: Multer
-- **Rich Text Editor**: React Quill
-- **Styling**: CSS3
-
----
-
-## 🔐 Security Features
-
-- Password hashing with bcryptjs
-- JWT authentication
-- HTTP-only cookies
-- CORS protection
-- Input validation
-- File upload restrictions
-
----
-
-## 🐛 Troubleshooting
-
-### Common Issues:
-
-1. **MongoDB Connection Error**
-   - Check your MongoDB URI in `.env`
-   - Ensure your IP is whitelisted in MongoDB Atlas
-
-2. **CORS Error**
-   - Verify CORS origin matches your frontend URL
-   - Check if credentials are enabled
-
-3. **File Upload Issues**
-   - Ensure `uploads/` folder exists
-   - Check file permissions
-
-4. **JWT Authentication Issues**
-   - Verify JWT secret is set in `.env`
-   - Check cookie settings in browser
-
----
+- **Backend**: Node.js, Express 4, Mongoose 6, JWT, zod, helmet, express-rate-limit
+- **Frontend**: React 18, Vite 5, React Router 7, React Quill, react-hot-toast, date-fns
+- **Infra**: MongoDB, Cloudinary, Docker, nginx, GitHub Actions
+- **Testing**: Jest, Supertest, mongodb-memory-server, Vitest, Testing Library
