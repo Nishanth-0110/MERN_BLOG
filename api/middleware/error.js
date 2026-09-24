@@ -21,6 +21,11 @@ const errorHandler = (err, req, res, next) => {
         status = 400;
         message = err.code === 'LIMIT_FILE_SIZE' ? 'Image must be under 5MB' : err.message;
     }
+    if (err.storageErrors || err.name === 'UnexpectedResponse') {
+        console.error('Image upload failed:', err.http_code, err.message);
+        status = 502;
+        message = 'Image upload failed. Please try again later.';
+    }
 
     if (status === 500 && !env.isTest) {
         console.error(err);
